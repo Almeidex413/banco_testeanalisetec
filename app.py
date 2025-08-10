@@ -324,7 +324,11 @@ with aba10:
             st.write("**Nota de Correlação:**")
             correlacao = df_itens_q10['quantidade'].corr(df_itens_q10['preco_unitario'])
             st.metric("Correlação (de -1 a 1)", f"{correlacao:.2f}")
-            st.write("Um número perto de 0, como este, sugere que não há uma ligação forte entre o preço e a quantidade que as pessoas compram.")
+            st.write("Se a nota for perto de -1 (negativa): Significa que existe uma forte relação inversa. No nosso caso, confirmaria que quanto mais caro o produto, menor a quantidade vendida." \
+            
+            "Se a nota for perto de +1 (positiva): Significa que existe uma forte relação direta (quanto mais caro, maior a quantidade vendida, o que é raro)." \
+            
+            "Se a nota for perto de 0: Significa que não existe uma ligação forte. O preço de um item não parece influenciar muito a quantidade que as pessoas compram dele em um pedido.")
         with col2:
             fig, ax = plt.subplots()
             ax.scatter(df_itens_q10['quantidade'], df_itens_q10['preco_unitario'], alpha=0.4, color='coral')
