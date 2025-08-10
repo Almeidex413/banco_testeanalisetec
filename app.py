@@ -15,7 +15,7 @@ except locale.Error:
         locale.setlocale(locale.LC_MONETARY, '')
 
 
-# --- conecxão e consult ---
+# --- conecxão e consult --- FUNÇÃO DE REGRA DE NEGÓCIOS
 def run_query(query):
     """
     consulta no banco PostgreSQL e retorna.
