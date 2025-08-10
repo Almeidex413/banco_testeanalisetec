@@ -120,7 +120,7 @@ if df_dashboard is not None and not df_dashboard.empty:
     df_display_filtrado['valor_total_item'] = df_display_filtrado['valor_total_item'].apply(lambda x: locale.currency(x, grouping=True))
     df_display_filtrado['preco_unitario'] = df_display_filtrado['preco_unitario'].apply(lambda x: locale.currency(x, grouping=True))
     df_display_filtrado['data_pedido'] = df_display_filtrado['data_pedido'].dt.strftime('%d/%m/%Y')
-    st.dataframe(df_display_filtrado, use_container_width=True, height=350)
+    st.dataframe(df_display_filtrado, use_container_width=True, height=350, hide_index=True)
 else:
     st.error("Não foi possível carregar os dados para o dashboard. Verifique se há dados no banco.")
 
@@ -151,7 +151,7 @@ with aba2:
     df_rfm_final = run_query(query_rfm_100_porcento)
     if df_rfm_final is not None:
         df_rfm_final['ticket_medio'] = df_rfm_final['ticket_medio'].apply(lambda x: locale.currency(x, grouping=True))
-        st.dataframe(df_rfm_final, use_container_width=True)
+        st.dataframe(df_rfm_final, use_container_width=True, hide_index=True)
 
 with aba3:
     st.subheader("Questão 3: Alteração do Modelo de Dados")
@@ -191,7 +191,7 @@ with aba4:
     df_top_produtos = run_query(query_top_produtos_corrigida)
     if df_top_produtos is not None:
         df_top_produtos['total_vendas'] = df_top_produtos['total_vendas'].apply(lambda x: locale.currency(x, grouping=True))
-        st.dataframe(df_top_produtos, use_container_width=True)
+        st.dataframe(df_top_produtos, use_container_width=True, hide_index=True)
 
 with aba5:
     st.subheader("Questão 5: Análise de Tendências de Vendas Mensais")
@@ -212,7 +212,7 @@ with aba5:
         df_tendencia_display = df_tendencia.copy()
         df_tendencia_display['total_vendas'] = df_tendencia_display['total_vendas'].apply(lambda x: locale.currency(x, grouping=True))
         df_tendencia_display['crescimento_percentual'] = df_tendencia_display['crescimento_percentual'].map('{:,.2f}%'.format)
-        st.dataframe(df_tendencia_display, use_container_width=True)
+        st.dataframe(df_tendencia_display, use_container_width=True, hide_index=True)
         st.write("Gráfico de Tendência de Vendas Totais por Mês:")
         df_tendencia.set_index('mes_ano', inplace=True)
         st.line_chart(df_tendencia['total_vendas'])
@@ -233,7 +233,7 @@ with aba6:
     if df_inativos is not None and not df_inativos.empty:
         st.write(f"Encontrados **{len(df_inativos)}** clientes inativos.")
         df_inativos['data_ultimo_pedido'] = df_inativos['data_ultimo_pedido'].fillna('Nunca comprou')
-        st.dataframe(df_inativos, use_container_width=True)
+        st.dataframe(df_inativos, use_container_width=True, hide_index=True)
     elif df_inativos is not None:
         st.success("🎉 Todos os clientes estão ativos!")
 
@@ -254,7 +254,7 @@ with aba7:
         df_anomalias_display = df_anomalias.copy()
         df_anomalias_display['valor_total_registrado'] = df_anomalias_display['valor_total_registrado'].apply(lambda x: locale.currency(x, grouping=True))
         df_anomalias_display['valor_calculado'] = df_anomalias_display['valor_calculado'].apply(lambda x: locale.currency(x, grouping=True))
-        st.dataframe(df_anomalias_display, use_container_width=True)
+        st.dataframe(df_anomalias_display, use_container_width=True, hide_index=True)
     elif df_anomalias is not None:
         st.success("✅ Nenhuma anomalia encontrada.")
 
@@ -273,8 +273,8 @@ CREATE INDEX idx_itens_pedido_id_produto ON itens_pedido(id_produto);
     st.code("CREATE INDEX idx_pedidos_data_pedido ON pedidos(data_pedido);", language='sql')
 
 with aba10:
-    st.subheader("Questão 10: Análise Exploratória (Versão Equilibrada)")
-    st.write("Investigando nossos dados com gráficos e explicações simples para encontrar informações importantes.")
+    st.subheader("Questão 10: Análise Exploratória com Pandas e Matplotlib")
+    st.write("Investigando os dados para encontrar informações importantes.")
     
     df_produtos_q10 = run_query("SELECT categoria, nome, preco FROM produtos WHERE preco IS NOT NULL;")
     df_itens_q10 = run_query("SELECT quantidade, preco_unitario FROM itens_pedido;")
