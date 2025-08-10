@@ -4,18 +4,18 @@ import psycopg2
 import matplotlib.pyplot as plt
 import locale
 
-# --- configs inciais---
+# --- config incial ---
 try:
     locale.setlocale(locale.LC_MONETARY, 'pt_BR.UTF-8')
 except locale.Error:
-    st.error("Locale 'pt_BR.UTF-8' não encontrado. A formatação de moeda pode não funcionar. No Windows, tente 'ptb' ou deixe em branco ('').")
+    st.error("Locale 'pt_BR.UTF-8' não encontrado. A formatação de moeda pode não funcionar. No Windows, tente 'ptb'.")
     try:
         locale.setlocale(locale.LC_MONETARY, 'ptb')
     except locale.Error:
         locale.setlocale(locale.LC_MONETARY, '')
 
 
-# --- conecxão e consulta ---
+# --- conecxão e consult ---
 def run_query(query):
     """
     Executa uma consulta no banco de dados PostgreSQL e retorna o resultado como um DataFrame do Pandas.
@@ -37,14 +37,13 @@ def run_query(query):
         st.error(f"Erro ao executar a consulta SQL: {e}")
         return None
 
-# --- config pag e side bar ---
+# --- config pag e sidebar ---
 st.set_page_config(layout="wide")
 st.title("Dashboard de Análise de Vendas")
 st.write("Projeto para a Avaliação Técnica de Analista de Dados.")
 
 st.sidebar.header("Opções de filtros Interativos")
 
-# Carrega os dados p sidebar
 query_para_filtros = """
     SELECT
         pd.data_pedido, c.nome AS nome_do_cliente, pr.categoria
@@ -55,15 +54,15 @@ query_para_filtros = """
 """
 df_para_filtros = run_query(query_para_filtros)
 
-min_data_default = pd.to_datetime("2023-01-01")
-max_data_default = pd.to_datetime("today")
+min_data_default = pd.to_datetime("2023-01-01").date()
+max_data_default = pd.to_datetime("today").date()
 categorias_selecionadas = []
 clientes_selecionados = []
 
 if df_para_filtros is not None and not df_para_filtros.empty:
     df_para_filtros['data_pedido'] = pd.to_datetime(df_para_filtros['data_pedido'])
-    min_data = df_para_filtros['data_pedido'].min()
-    max_data = df_para_filtros['data_pedido'].max()
+    min_data = df_para_filtros['data_pedido'].min().date()
+    max_data = df_para_filtros['data_pedido'].max().date()
 
     data_inicio = st.sidebar.date_input("Data de Início", min_data, min_value=min_data, max_value=max_data)
     data_fim = st.sidebar.date_input("Data de Fim", max_data, min_value=min_data, max_value=max_data)
@@ -97,7 +96,7 @@ df_dashboard = run_query(query_dashboard)
 if df_dashboard is not None and not df_dashboard.empty:
     df_dashboard['data_pedido'] = pd.to_datetime(df_dashboard['data_pedido'])
     
-    # Aplicação dos filtros em cascata
+    # filtrs cascata
     df_filtrado = df_dashboard[
         (df_dashboard['data_pedido'].dt.date >= data_inicio) &
         (df_dashboard['data_pedido'].dt.date <= data_fim)
@@ -120,12 +119,13 @@ if df_dashboard is not None and not df_dashboard.empty:
     df_display_filtrado = df_filtrado.copy()
     df_display_filtrado['receita_do_item'] = df_display_filtrado['receita_do_item'].apply(lambda x: locale.currency(x, grouping=True))
     df_display_filtrado['preco_unitario'] = df_display_filtrado['preco_unitario'].apply(lambda x: locale.currency(x, grouping=True))
+    df_display_filtrado['data_pedido'] = df_display_filtrado['data_pedido'].dt.strftime('%d/%m/%Y')
     st.dataframe(df_display_filtrado, use_container_width=True, height=350)
 else:
     st.error("Não foi possível carregar os dados para o dashboard. Verifique se há dados no banco.")
 
 
-# --- questoes avalização  ---
+# --- prox questões ---
 st.header("Análises Detalhadas (Questões da Avaliação)")
 
 aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba10 = st.tabs([
@@ -135,7 +135,7 @@ aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba10 = st.tabs([
 
 with aba2:
     st.subheader("Questão 2: Análise RFM (Recência, Frequência e Valor)")
-    query_rfm_final = """
+    query_rfm_100_porcento = """
         WITH PedidosNumerados AS (
             SELECT c.id_cliente, c.nome AS nome_cliente, p.data_pedido, p.valor_total,
                    LAG(p.data_pedido, 1) OVER (PARTITION BY c.id_cliente ORDER BY p.data_pedido) AS data_pedido_anterior,
@@ -148,7 +148,7 @@ with aba2:
                MAX(pn.total_pedidos) as total_pedidos, AVG(pn.valor_total) as ticket_medio
         FROM PedidosNumerados pn GROUP BY pn.id_cliente, pn.nome_cliente ORDER BY dias_desde_ultimo_pedido;
     """
-    df_rfm_final = run_query(query_rfm_final)
+    df_rfm_final = run_query(query_rfm_100_porcento)
     if df_rfm_final is not None:
         df_rfm_final['ticket_medio'] = df_rfm_final['ticket_medio'].apply(lambda x: locale.currency(x, grouping=True))
         st.dataframe(df_rfm_final, use_container_width=True)
@@ -158,24 +158,21 @@ with aba3:
     st.write(
         """
         **Cenário:** Permitir que um pedido tenha múltiplos clientes (compras compartilhadas).
-        
-        **Modelo Atual:** Atualmente, a tabela `pedidos` possui uma coluna `id_cliente`, o que configura uma relação de **Um-para-Muitos**.
-
         **Solução:** Implementar uma relação de **Muitos-para-Muitos** através de uma **tabela de junção**.
         """
     )
-    st.image("prints/normalização de tabelas MUITOS X MUITOS.png", caption="Diagrama da Relação Muitos-para-Muitos com a tabela de junção 'pedidos_clientes'.", use_container_width=True)
+    st.image("prints/normalização de tabelas MUITOS X MUITOS.png", caption="Diagrama da Relação Muitos-para-Muitos.", use_container_width=True)
     st.code(
         """
-    -- Passo 1: Remover a coluna que limita o pedido a um único cliente.
-    ALTER TABLE pedidos DROP COLUMN id_cliente;
+-- Passo 1: Remover a coluna que limita o pedido a um único cliente.
+ALTER TABLE pedidos DROP COLUMN id_cliente;
 
-    -- Passo 2: Criar a nova tabela de junção.
-    CREATE TABLE pedidos_clientes (
-        id_pedido INT REFERENCES pedidos(id_pedido),
-        id_cliente INT REFERENCES clientes(id_cliente),
-        PRIMARY KEY (id_pedido, id_cliente)
-    );
+-- Passo 2: Criar a nova tabela de junção.
+CREATE TABLE pedidos_clientes (
+    id_pedido INT REFERENCES pedidos(id_pedido),
+    id_cliente INT REFERENCES clientes(id_cliente),
+    PRIMARY KEY (id_pedido, id_cliente)
+);
         """, language='sql'
     )
 
@@ -276,20 +273,20 @@ CREATE INDEX idx_itens_pedido_id_produto ON itens_pedido(id_produto);
     st.code("CREATE INDEX idx_pedidos_data_pedido ON pedidos(data_pedido);", language='sql')
 
 with aba10:
-    st.subheader("Questão 10: Análise Exploratória com Pandas e Matplotlib")
-    st.write("Investigando nossos dados de vendas com gráficos para encontrar informações importantes.")
+    st.subheader("Questão 10: Análise Exploratória (Versão Equilibrada)")
+    st.write("Investigando nossos dados com gráficos e explicações simples para encontrar informações importantes.")
     
     df_produtos_q10 = run_query("SELECT categoria, nome, preco FROM produtos WHERE preco IS NOT NULL;")
     df_itens_q10 = run_query("SELECT quantidade, preco_unitario FROM itens_pedido;")
 
     plot_type = st.selectbox(
         "Escolha qual investigação você quer ver:",
-        ["Distruição de preços?", "Categoria de maior valor?", "Preço afeta a quantidade vendida?"],
+        ["Como os preços se distribuem?", "Qual categoria é mais cara?", "Preço afeta a quantidade vendida?"],
         key="q10_final" 
     )
     st.markdown("---")
     
-    if plot_type == "Distruição de preços?" and df_produtos_q10 is not None:
+    if plot_type == "Como os preços se distribuem?" and df_produtos_q10 is not None:
         st.markdown("#### Investigação 1: Temos mais produtos caros ou baratos?")
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -301,13 +298,13 @@ with aba10:
             st.pyplot(fig)
         with col2:
             st.write("**O que este gráfico nos diz?**")
-            st.info("As barras mais altas mostram as faixas de preço onde se concentra a maioria dos nossos produtos. Assim, descobrimos se nossa loja tem mais produtos em 'conta' ou produtos de 'luxo'.")
+            st.info("As barras mais altas mostram as faixas de preço onde se concentra a maioria dos nossos produtos. Assim, descobrimos se nossa loja tem mais produtos em conta ou de luxo.")
             preco_medio = df_produtos_q10['preco'].mean()
             st.metric("Preço Médio de um Produto", locale.currency(preco_medio, grouping=True))
 
-    elif plot_type == "Categoria de maior valor?" and df_produtos_q10 is not None:
+    elif plot_type == "Qual categoria é mais cara?" and df_produtos_q10 is not None:
         st.markdown("#### Investigação 2: Comparando os preços entre as categorias")
-        st.info("**Como ler o gráfico:** Cada caixa é um 'resumo' dos preços de uma categoria. A linha no meio é o preço mais comum (mediana). Isso nos ajuda a ver de forma rápida e fácil qual categoria de produtos tem preços geralmente mais altos ou mais baixos.")
+        st.info("**Como ler o gráfico:** Cada caixa é um 'resumo' dos preços de uma categoria. A linha no meio é o preço mais comum. Isso nos ajuda a ver qual categoria tem preços geralmente mais altos.")
         data_to_plot = df_produtos_q10.groupby('categoria')['preco'].apply(list)
         fig, ax = plt.subplots(figsize=(12, 7))
         ax.boxplot(data_to_plot, labels=data_to_plot.index, patch_artist=True)
@@ -319,19 +316,19 @@ with aba10:
         st.pyplot(fig)
 
     elif plot_type == "Preço afeta a quantidade vendida?" and df_itens_q10 is not None:
-        st.markdown("#### Investigação 3: A relação entre o preço e a quantidade vendida por item")
+        st.markdown("#### Investigação 3: A relação entre o preço e a quantidade vendida")
         col1, col2 = st.columns([1, 2])
         with col1:
             st.write("**O que estamos procurando?**")
-            st.info("Cada ponto no gráfico representa um item em um pedido. Queremos ver se existe um padrão. Por exemplo: será que produtos mais caros (pontos mais altos no eixo Y) vendem em menor quantidade (pontos mais à esquerda no eixo X)?")
+            st.info("Queremos ver se existe um padrão. Por exemplo, será que produtos mais caros vendem em menor quantidade?")
             st.write("**Nota de Correlação:**")
             correlacao = df_itens_q10['quantidade'].corr(df_itens_q10['preco_unitario'])
             st.metric("Correlação (de -1 a 1)", f"{correlacao:.2f}")
-            st.write("Um número perto de 0, como este, sugere que não há uma ligação forte entre o preço de um item e a quantidade que as pessoas compram dele em um único pedido.")
+            st.write("Um número perto de 0, como este, sugere que não há uma ligação forte entre o preço e a quantidade que as pessoas compram.")
         with col2:
             fig, ax = plt.subplots()
             ax.scatter(df_itens_q10['quantidade'], df_itens_q10['preco_unitario'], alpha=0.4, color='coral')
             ax.set_title("Dispersão: Preço Unitário vs. Quantidade")
-            ax.set_xlabel("Quantidade Vendida no Pedido")
+            ax.set_xlabel("Quantidade Vendida")
             ax.set_ylabel("Preço Unitário (R$)")
             st.pyplot(fig)
