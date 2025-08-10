@@ -6,7 +6,7 @@ import locale
 
 # --- config incial ---
 try:
-    locale.setlocale(locale.LC_MONETARY, 'pt_BR.UTF-8')
+    locale.setlocale(locale.LC_MONETARY, 'pt_BR.UTF-8') # pt_BR MONETÁRIO
 except locale.Error:
     st.error("Locale 'pt_BR.UTF-8' não encontrado. A formatação de moeda pode não funcionar. No Windows, tente 'ptb'.")
     try:
@@ -18,7 +18,7 @@ except locale.Error:
 # --- conecxão e consult ---
 def run_query(query):
     """
-    Executa uma consulta no banco de dados PostgreSQL e retorna o resultado como um DataFrame do Pandas.
+    consulta no banco PostgreSQL e retorna.
     """
     try:
         with psycopg2.connect(
@@ -39,7 +39,7 @@ def run_query(query):
 
 # --- config pag e sidebar ---
 st.set_page_config(layout="wide")
-st.title("Dashboard de Análise de Vendas")
+st.title("Análise de Vendas")
 st.write("Projeto para a Avaliação Técnica de Analista de Dados.")
 
 st.sidebar.header("Opções de filtros Interativos")
@@ -79,13 +79,13 @@ else:
 
 
 # --- dash principal ---
-st.header("Dashboard de Vendas Interativo")
+st.header("Controle Geral de Vendas Interativo")
 
 query_dashboard = """
     SELECT
         pd.data_pedido, pd.id_pedido, c.nome AS nome_do_cliente,
         pr.nome AS nome_do_produto, pr.categoria, ip.quantidade,
-        ip.preco_unitario, (ip.quantidade * ip.preco_unitario) AS receita_do_item
+        ip.preco_unitario, (ip.quantidade * ip.preco_unitario) AS valor_total_item
     FROM itens_pedido AS ip
     INNER JOIN produtos AS pr ON ip.id_produto = pr.id_produto
     INNER JOIN pedidos AS pd ON ip.id_pedido = pd.id_pedido
@@ -108,7 +108,7 @@ if df_dashboard is not None and not df_dashboard.empty:
 
     st.write(f"Análise para o período de **{data_inicio.strftime('%d/%m/%Y')}** a **{data_fim.strftime('%d/%m/%Y')}**.")
     col1, col2, col3 = st.columns(3)
-    total_receita = df_filtrado['receita_do_item'].sum()
+    total_receita = df_filtrado['valor_total_item'].sum()
     total_pedidos = df_filtrado['id_pedido'].nunique()
     total_produtos_vendidos = df_filtrado['quantidade'].sum()
     col1.metric("Receita Total", locale.currency(total_receita, grouping=True))
@@ -117,7 +117,7 @@ if df_dashboard is not None and not df_dashboard.empty:
     
     st.write("Detalhes dos Pedidos no Período Selecionado:")
     df_display_filtrado = df_filtrado.copy()
-    df_display_filtrado['receita_do_item'] = df_display_filtrado['receita_do_item'].apply(lambda x: locale.currency(x, grouping=True))
+    df_display_filtrado['valor_total_item'] = df_display_filtrado['valor_total_item'].apply(lambda x: locale.currency(x, grouping=True))
     df_display_filtrado['preco_unitario'] = df_display_filtrado['preco_unitario'].apply(lambda x: locale.currency(x, grouping=True))
     df_display_filtrado['data_pedido'] = df_display_filtrado['data_pedido'].dt.strftime('%d/%m/%Y')
     st.dataframe(df_display_filtrado, use_container_width=True, height=350)
@@ -324,11 +324,11 @@ with aba10:
             st.write("**Nota de Correlação:**")
             correlacao = df_itens_q10['quantidade'].corr(df_itens_q10['preco_unitario'])
             st.metric("Correlação (de -1 a 1)", f"{correlacao:.2f}")
-            st.write("Se a nota for perto de -1 (negativa): Significa que existe uma forte relação inversa. No nosso caso, confirmaria que quanto mais caro o produto, menor a quantidade vendida." \
+            st.write("**Se** a nota for perto de -1 (negativa): Significa que existe uma forte relação inversa. No nosso caso, confirmaria que quanto mais caro o produto, menor a quantidade vendida.")
             
-            "Se a nota for perto de +1 (positiva): Significa que existe uma forte relação direta (quanto mais caro, maior a quantidade vendida, o que é raro)." \
+            st.write("**Se** a nota for perto de +1 (positiva): Significa que existe uma forte relação direta (quanto mais caro, maior a quantidade vendida, o que é raro).")
             
-            "Se a nota for perto de 0: Significa que não existe uma ligação forte. O preço de um item não parece influenciar muito a quantidade que as pessoas compram dele em um pedido.")
+            st.write("**Se** a nota for perto de 0: Significa que não existe uma ligação forte. O preço de um item não parece influenciar muito a quantidade que as pessoas compram dele em um pedido.")
         with col2:
             fig, ax = plt.subplots()
             ax.scatter(df_itens_q10['quantidade'], df_itens_q10['preco_unitario'], alpha=0.4, color='coral')
